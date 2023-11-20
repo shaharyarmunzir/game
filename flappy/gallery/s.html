@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Shooting Game</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+            background-color: #030303;
+        }
+
+        #player {
+            position: absolute;
+            width: 20%; /* Adjust the width for better touch controls on smaller screens */
+            height: 5px;
+            background-color: blue;
+            bottom: 0;
+        }
+
+        #target {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            background-color: red;
+            border-radius: 50%;
+        }
+
+        #score {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-size: 20px;
+        }
+
+        #lives {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: white;
+            font-size: 20px;
+        }
+
+        #move-left-button, #move-right-button {
+            display: block;
+            width: 30px;
+            height: 30px;
+            background-color: transparent;
+            border: none;
+            position: absolute;
+            bottom: 10px;
+            color: white;
+            font-size: 20px;
+            z-index: 1; /* Ensure touch control buttons are in front */
+        }
+
+        #startButton {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 2; /* Ensure "Start" button is in front of "Stop" button */
+        }
+
+        #stopButton {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        #restartButton {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="player"></div>
+        <div id="target"></div>
+        <div id="hazard"></div>
+        <div id="score">Score: 0</div>
+        <div id="lives">Lives: 3</div>
+    </div>
+    <button id="move-left-button" onclick="moveLeft()"><</button>
+<button id="move-right-button" onclick="moveRight()">></button>
+
+    <button id="move-left-button" onclick="moveLeft()"><</button>
+    <button id="move-right-button" onclick="moveRight()">></button>
+    <button id="startButton" onclick="startGame()"><svg xmlns="http://www.w3.org/2000/svg" width="54" height="54" viewBox="0 0 24 24" style="fill: rgb(247, 244, 244); transform: msFilter;"><path d="m10 17 6-5-6-5z"></path><path d="M12 2C6.486 2 2 6.486 2 12s4.486 10 10 10 10-4.486 10-10S17.514 2 12 2zm0 18c-4.411 0-8-3.589-8-8s3.589-8 8-8 8 3.589 8 8-3.589 8-8 8z"></path></svg></button>
+    <button id="stopButton" onclick="stopGame()" disabled>Stop</button>
+    <button id="restartButton" onclick="restartGame()" style="display: none;"><svg xmlns="http://www.w3.org/2000/svg" width="54" height="54" viewBox="0 0 24 24" style="fill: rgb(248, 245, 245); transform: msFilter;"><path d="m10 17 6-5-6-5z"></path><path d="M12 2C6.486 2 2 6.486 2 12s4.486 10 10 10 10-4.486 10-10S17.514 2 12 2zm0 18c-4.411 0-8-3.589-8-8s3.589-8 8-8 8 3.589 8 8-3.589 8-8 8z"></path></svg></button>
+    <script>
+        // JavaScript code for the Simple Shooting Game
+
+        // Constants for player, target, and hazard elements
+        const player = document.getElementById("player");
+        const target = document.getElementById("target");
+        const hazard = document.getElementById("hazard");
+        const scoreElement = document.getElementById("score");
+        const livesElement = document.getElementById("lives");
+        const startButton = document.getElementById("startButton");
+        const stopButton = document.getElementById("stopButton");
+        const restartButton = document.getElementById("restartButton");
+
+        // Initial positions for player, target, and hazard
+        let playerPositionX = 50;
+        let targetPositionY = 0;
+        let hazardPositionY = 0;
+
+        // Initialize the score and lives
+        let score = 0;
+        let lives = 3;
+        let gameInterval;
+        let hazardInterval;
+
+        // Set initial positions
+        player.style.left = playerPositionX + "px";
+        target.style.top = targetPositionY + "px";
+        // Set the initial position of the target and hazard within the game container
+        target.style.left = Math.floor(Math.random() * (window.innerWidth - 30)) + "px";
+        hazard.style.left = Math.floor(Math.random() * (window.innerWidth - 20)) + "px";
+
+        // Event listener for player movement
+        document.addEventListener("keydown", movePlayer);
+
+        function movePlayer(event) {
+            if (event.key === "ArrowLeft" && playerPositionX > 0) {
+                playerPositionX -= 10;
+            } else if (event.key === "ArrowRight" && playerPositionX < window.innerWidth - 50) {
+                playerPositionX += 10;
+            }
+
+            // Update player position
+            player.style.left = playerPositionX + "px";
+        }
+
+        // Function to start the game
+        function startGame() {
+            startButton.style.display = "none"; // Hide the "Start" button
+            startButton.disabled = true;
+            stopButton.disabled = false;
+            gameInterval = setInterval(updateGame, 16);
+            
+            // Schedule hazard appearance every 15 seconds
+            hazardInterval = setInterval(spawnHazard, 15000);
+        }
+
+        // Function to stop the game
+        function stopGame() {
+            clearInterval(gameInterval);
+            clearInterval(hazardInterval);
+            startButton.style.display = "block"; // Show the "Start" button
+            startButton.disabled = false;
+            stopButton.disabled = true;
+            if (lives === 0) {
+                restartButton.style.display = "block"; // Show the "Restart" button at the end of the game
+            }
+        }
+
+        // Function to restart the game
+        function restartGame() {
+            restartButton.style.display = "none"; // Hide the "Restart" button
+            score = 0;
+            lives = 3;
+            scoreElement.innerText = "Score: " + score;
+            livesElement.innerText = "Lives: " + lives;
+            startGame();
+        }
+
+        // Function to update the game elements
+        function updateGame() {
+            targetPositionY += 5;
+            hazardPositionY += 5;
+            target.style.top = targetPositionY + "px";
+            hazard.style.top = hazardPositionY + "px";
+
+            if (targetPositionY >= window.innerHeight - 30) {
+                // Target fell to the bottom; reduce a life and reset the target position
+                lives--;
+                livesElement.innerText = "Lives: " + lives;
+                targetPositionY = 0;
+                target.style.left = Math.floor(Math.random() * (window.innerWidth - 30)) + "px";
+            }
+
+            if (hazardPositionY >= window.innerHeight - 20) {
+                // Hazard fell to the bottom; reset its position
+                hazardPositionY = 0;
+                hazard.style.left = Math.floor(Math.random() * (window.innerWidth - 20)) + "px";
+            }
+
+            // Check for collisions and handle accordingly
+            if (isCollision(target, player)) {
+                // Collision with target detected; increase the score and reset the target position
+                score++;
+                scoreElement.innerText = "Score: " + score;
+                targetPositionY = 0;
+                target.style.left = Math.floor(Math.random() * (window.innerWidth - 30)) + "px";
+            } else if (isCollision(hazard, player)) {
+                // Collision with hazard detected; reduce a life and reset the hazard position
+                lives--;
+                livesElement.innerText = "Lives: " + lives;
+                hazardPositionY = 0;
+                hazard.style.left = Math.floor(Math.random() * (window.innerWidth - 20)) + "px";
+            }
+
+            // Check if the player has run out of lives
+            if (lives === 0) {
+                endGame();
+            }
+        }
+
+        // Function to check for collisions between two elements
+        function isCollision(element1, element2) {
+            const element1Rect = element1.getBoundingClientRect();
+            const element2Rect = element2.getBoundingClientRect();
+
+            return (
+                element1Rect.top < element2Rect.bottom &&
+                element1Rect.bottom > element2Rect.top &&
+                element1Rect.left < element2Rect.right &&
+                element1Rect.right > element2Rect.left
+            );
+        }
+
+        // Function to end the game
+        function endGame() {
+            clearInterval(gameInterval);
+            clearInterval(hazardInterval);
+            stopButton.disabled = true;
+            restartButton.style.display = "block"; // Show the "Restart" button at the end of the game
+        }
+
+        // Function to spawn the hazard
+        function spawnHazard() {
+            // Set the hazard's initial position
+            hazardPositionY = 0;
+            hazard.style.left = Math.floor(Math.random() * (window.innerWidth - 20)) + "px";
+        }
+
+
+
+
+
+
+
+
+        // New functions for mobile control
+function moveLeft() {
+    if (playerPositionX > 0) {
+        playerPositionX -= 10;
+        player.style.left = playerPositionX + "px";
+    }
+}
+
+function moveRight() {
+    if (playerPositionX < window.innerWidth - 50) {
+        playerPositionX += 10;
+        player.style.left = playerPositionX + "px";
+    }
+}
+document.addEventListener("keydown", movePlayer);
+
+    </script>
+</body>
+</html>
